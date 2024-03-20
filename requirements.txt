@@ -1,0 +1,5 @@
+﻿aiocoap==0.4.7
+eltako14bus==0.0.46
+pyserial==3.5
+pyserial-asyncio==0.6
+enocean==0.60.1
