@@ -124,7 +124,7 @@ class ESP3SerialCommunicator(Communicator):
 
     def __callback_wrapper(self, msg: Packet):
         if msg.packet_type == PACKET.RESPONSE and msg.data[0] != RETURN_CODE.OK:
-            self.log.error(f"Received ESP3 response with with return code {RETURN_CODE(msg.data[0]).name} ({msg.data[0]}) - {str(msg)} ")
+            self.log.error(f"Received ESP3 response with return code {RETURN_CODE(msg.data[0]).name} ({msg.data[0]}) - {str(msg)} ")
             return
 
         if self._outside_callback:
