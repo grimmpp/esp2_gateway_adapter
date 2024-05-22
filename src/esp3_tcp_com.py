@@ -7,7 +7,7 @@ from zeroconf import ServiceBrowser, Zeroconf, ServiceStateChange
 from .esp3_serial_com import ESP3SerialCommunicator
 
 
-def detect_lan_gateways(self) -> list[str]:
+def detect_lan_gateways() -> list[str]:
     result = []
 
     zeroconf = Zeroconf()
@@ -83,7 +83,7 @@ class TCP2SerialCommunicator(ESP3SerialCommunicator):
                 # Read chars from serial port as hex numbers
                 try:
                     data = self.__ser.recv(1024)
-                    print(hex(int.from_bytes(data, "big")))
+                    # print(hex(int.from_bytes(data, "big")))
                     if data != b'IM2M':
                         self._buffer = data
                         self.parse()
