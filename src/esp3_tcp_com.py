@@ -55,6 +55,7 @@ class TCP2SerialCommunicator(ESP3SerialCommunicator):
 
         self.__ser = None
 
+
     def run(self):
         self.logger.info('TCP2SerialCommunicator started')
         self._fire_status_change_handler(connected=False)
@@ -64,7 +65,14 @@ class TCP2SerialCommunicator(ESP3SerialCommunicator):
                 if self.__ser is None:
                     self.__ser = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     self.__ser.connect((self._host, self._port))
-                    self.__ser.settimeout(0.5)
+                    self.__ser.settimeout(1)
+
+                    # Test connection
+                    self.__ser.send(b'\xff\x00\xff' * 5)
+                    try:
+                        self.__ser.recv(1024)
+                    except socket.timeout as e:
+                        pass
 
                     self.log.info("Established TCP connection to %s:%s", self._host, self._port)
                     
@@ -89,8 +97,6 @@ class TCP2SerialCommunicator(ESP3SerialCommunicator):
                         self.parse()
                 except socket.timeout as e:
                     pass
-                except Exception as e:
-                    self.log.exception(e)
                 time.sleep(0)
 
             except Exception as e:
