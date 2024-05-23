@@ -1,10 +1,13 @@
 import socket
 import time
 import logging
+import sys
+import os
 
 from zeroconf import ServiceBrowser, Zeroconf, ServiceStateChange
 
-from .esp3_serial_com import ESP3SerialCommunicator
+
+from esp3_serial_com import ESP3SerialCommunicator
 
 
 def detect_lan_gateways() -> list[str]:
@@ -50,7 +53,7 @@ class TCP2SerialCommunicator(ESP3SerialCommunicator):
         self.esp2_translation_enabled = esp2_translation_enabled
         self._outside_callback = callback
         self._auto_reconnect = auto_reconnect
-        
+
         super(TCP2SerialCommunicator, self).__init__(None, log, callback, None, reconnection_timeout, esp2_translation_enabled, auto_reconnect)
 
         self._host = host
@@ -61,8 +64,20 @@ class TCP2SerialCommunicator(ESP3SerialCommunicator):
         self.__ser = None
 
 
+    def _test_connection(self):
+        sent = self.__ser.send(b'\xff\x00\xff' * 5)
+        if sent == 0:
+            raise Exception("Data was not sent.")
+        try:
+            self.__ser.recv(1024)
+        except socket.timeout as e:
+            pass
+        self.log.debug("connection test successful")
+
+
     def run(self):
-        self.logger.info('TCP2SerialCommunicator started')
+        timeout_count = 0
+        self.log.info('TCP2SerialCommunicator started')
         self._fire_status_change_handler(connected=False)
         while not self._stop_flag.is_set():
             try:
@@ -73,11 +88,7 @@ class TCP2SerialCommunicator(ESP3SerialCommunicator):
                     self.__ser.settimeout(1)
 
                     # Test connection
-                    self.__ser.send(b'\xff\x00\xff' * 5)
-                    try:
-                        self.__ser.recv(1024)
-                    except socket.timeout as e:
-                        pass
+                    self._test_connection()
 
                     self.log.info("Established TCP connection to %s:%s", self._host, self._port)
                     
@@ -100,8 +111,15 @@ class TCP2SerialCommunicator(ESP3SerialCommunicator):
                     if data != b'IM2M':
                         self._buffer = data
                         self.parse()
+                    timeout_count = 0
+
                 except socket.timeout as e:
-                    pass
+                    self.log.debug("receive message timeout")
+                    timeout_count += 1
+                    if timeout_count > 10:  # after 10s without receiving something disconnect
+                        timeout_count = 0
+                        self.__ser.close()
+                        
                 time.sleep(0)
 
             except Exception as e:
@@ -121,3 +139,13 @@ class TCP2SerialCommunicator(ESP3SerialCommunicator):
         self.is_serial_connected.clear()
         self._fire_status_change_handler(connected=False)
         self.logger.info('TCP2SerialCommunicator stopped')
+
+
+
+if __name__ == '__main__':
+    def callback_fuct(data):
+        print( data)
+
+    t = TCP2SerialCommunicator('192.168.178.85', 5100, callback=callback_fuct, esp2_translation_enabled=True, auto_reconnect=True)
+    t.start()
+    t.join()
