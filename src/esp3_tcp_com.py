@@ -113,7 +113,6 @@ class TCP2SerialCommunicator(ESP3SerialCommunicator):
                     timeout_count = 0
 
                 except socket.timeout as e:
-                    self.log.debug("receive message timeout")
                     timeout_count += 1
                     if timeout_count > 10:  # after 10s without receiving something disconnect
                         timeout_count = 0
