@@ -46,11 +46,16 @@ class TCP2SerialCommunicator(ESP3SerialCommunicator):
                  esp2_translation_enabled:bool=False,  
                  auto_reconnect=True):
         
+        self.__recon_time = reconnection_timeout
+        self.esp2_translation_enabled = esp2_translation_enabled
+        self._outside_callback = callback
+        self._auto_reconnect = auto_reconnect
+        
         super(TCP2SerialCommunicator, self).__init__(None, log, callback, None, reconnection_timeout, esp2_translation_enabled, auto_reconnect)
 
         self._host = host
         self._port = port
-
+        
         self.log = log or logging.getLogger('eltakobus.tcp2serial')
 
         self.__ser = None
