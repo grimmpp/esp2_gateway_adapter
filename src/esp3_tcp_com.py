@@ -6,8 +6,7 @@ import os
 
 from zeroconf import ServiceBrowser, Zeroconf, ServiceStateChange
 
-
-from esp3_serial_com import ESP3SerialCommunicator
+from .esp3_serial_com import ESP3SerialCommunicator
 
 
 def detect_lan_gateways() -> list[str]:
