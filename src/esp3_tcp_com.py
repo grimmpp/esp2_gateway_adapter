@@ -18,21 +18,25 @@ def detect_lan_gateways() -> list[str]:
         if state_change is ServiceStateChange.Added:
             zeroconf.get_service_info(service_type, name)
 
-    name = '_bsc-sc-socket._tcp.local.'
-    ServiceBrowser(zeroconf, name, handlers=[on_service_state_change])
-    
-    time.sleep(2)
-    
-    alias = zeroconf.cache.entries_with_name('_bsc-sc-socket._tcp.local.')[0].alias
-    service_name = alias.split('.')[0] + '.local.'
+    try:
+        name = '_bsc-sc-socket._tcp.local.'
+        ServiceBrowser(zeroconf, name, handlers=[on_service_state_change])
+        
+        time.sleep(2)
+        
+        alias = zeroconf.cache.entries_with_name('_bsc-sc-socket._tcp.local.')[0].alias
+        service_name = alias.split('.')[0] + '.local.'
 
-    for e in zeroconf.cache.entries_with_name(service_name):
-        if 'record[a' in str(e):
-            ip_adr = str(e).split('=')[1].split(',')[1]
-            if ip_adr not in result:
-                result.append(ip_adr)
+        for e in zeroconf.cache.entries_with_name(service_name):
+            if 'record[a' in str(e):
+                ip_adr = str(e).split('=')[1].split(',')[1]
+                if ip_adr not in result:
+                    result.append(ip_adr)
 
-    zeroconf.close()
+        zeroconf.close()
+        
+    except Exception:
+        pass
     
     return result
 
@@ -62,15 +66,14 @@ class TCP2SerialCommunicator(ESP3SerialCommunicator):
 
         self.__ser = None
 
+    def set_auto_reconnect(self, enabled:bool):
+        self._auto_reconnect = enabled
 
     def _test_connection(self):
-        sent = self.__ser.send(b'\xff\x00\xff' * 5)
-        if sent == 0:
-            raise Exception("Data was not sent.")
-        try:
-            self.__ser.recv(1024)
-        except socket.timeout as e:
-            pass
+        # for i in range(5):
+        #     if self.base_id is None:
+        #         time.sleep(1)
+        print(f"base id: {self.base_id}")
         self.log.debug("connection test successful")
 
 
@@ -82,12 +85,13 @@ class TCP2SerialCommunicator(ESP3SerialCommunicator):
             try:
                 # Initialize serial port
                 if self.__ser is None:
+                    
                     self.__ser = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     self.__ser.connect((self._host, self._port))
                     self.__ser.settimeout(1)
 
-                    # Test connection
-                    self._test_connection()
+                    if self.base_id is None:
+                        raise Exception("Connection not established.")
 
                     self.log.info("Established TCP connection to %s:%s", self._host, self._port)
                     
