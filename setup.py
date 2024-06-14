@@ -20,7 +20,7 @@ required = ['eltako14bus>=0.0.46', 'enocean>=0.60.1', 'pyserial', 'pyserial-asyn
 
 setup(
     name='esp2_gateway_adapter',
-    version='0.2.7',
+    version='0.2.8',
     package_dir={"esp2_gateway_adapter":'src'},
     package=[""],
     include_package_data=True,
