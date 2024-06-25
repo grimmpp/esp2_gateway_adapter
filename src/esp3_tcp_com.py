@@ -90,9 +90,6 @@ class TCP2SerialCommunicator(ESP3SerialCommunicator):
                     self.__ser.connect((self._host, self._port))
                     self.__ser.settimeout(1)
 
-                    if self.base_id is None:
-                        raise Exception("Connection not established.")
-
                     self.log.info("Established TCP connection to %s:%s", self._host, self._port)
                     
                     self.is_serial_connected.set()
@@ -150,4 +147,9 @@ if __name__ == '__main__':
 
     t = TCP2SerialCommunicator('192.168.178.85', 5100, callback=callback_fuct, esp2_translation_enabled=True, auto_reconnect=True)
     t.start()
+
+    time.sleep(4)
+
+    base_id = t.base_id
+    
     t.join()

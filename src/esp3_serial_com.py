@@ -1,5 +1,5 @@
-# -*- encoding: utf-8 -*-
 from __future__ import print_function, unicode_literals, division, absolute_import
+# -*- encoding: utf-8 -*-
 import asyncio
 import datetime
 import logging
@@ -148,8 +148,12 @@ class ESP3SerialCommunicator(Communicator):
 
     async def send(self, packet) -> bool:
         if self.esp2_translation_enabled:
-            esp3_msg = ESP3SerialCommunicator.convert_esp2_to_esp3_message(packet)
-            self.log.info(f"Converted esp2 ({str(packet)} - {b2s(packet.serialize())}) message to esp3 ({str(esp3_msg)} - {b2s(esp3_msg.build())})")
+            if not isinstance(packet, Packet):
+                esp3_msg = ESP3SerialCommunicator.convert_esp2_to_esp3_message(packet)
+                self.log.info(f"Converted esp2 ({str(packet)} - {b2s(packet.serialize())}) message to esp3 ({str(esp3_msg)} - {b2s(esp3_msg.build())})")
+            else:
+                esp3_msg = packet
+            
             if esp3_msg is None:
                 self.log.warn(f"[ESP3SerialCommunicator] Cannot convert to esp3 message ({str(packet)}).")
             else:
@@ -231,31 +235,37 @@ class ESP3SerialCommunicator(Communicator):
     @property
     def base_id(self):
         ''' Fetches Base ID from the transmitter, if required. Otherwise returns the currently set Base ID. '''
-        # If base id is already set, return it.
-        if self._base_id is not None:
-            return self._base_id
+        try:
+            callback = self._outside_callback
+            self._outside_callback = None
 
-        # Send COMMON_COMMAND 0x08, CO_RD_IDBASE request to the module
-        super().send(Packet(PACKET.COMMON_COMMAND, data=[0x08]))
-        # Loop over 10 times, to make sure we catch the response.
-        # Thanks to timeout, shouldn't take more than a second.
-        # Unfortunately, all other messages received during this time are ignored.
-        for i in range(0, 10):
-            try:
-                packet = self.receive.get(block=True, timeout=0.1)
-                # We're only interested in responses to the request in question.
-                if packet.packet_type == PACKET.RESPONSE and packet.response == RETURN_CODE.OK and len(packet.response_data) == 4:  # noqa: E501
-                    # Base ID is set in the response data.
-                    self._base_id = packet.response_data
-                    # Put packet back to the Queue, so the user can also react to it if required...
+            # If base id is already set, return it.
+            if self._base_id is not None:
+                return self._base_id
+
+            # Send COMMON_COMMAND 0x08, CO_RD_IDBASE request to the module
+            super().send(Packet(PACKET.COMMON_COMMAND, data=[0x08]))
+            # Loop over 10 times, to make sure we catch the response.
+            # Thanks to timeout, shouldn't take more than a second.
+            # Unfortunately, all other messages received during this time are ignored.
+            for i in range(0, 10):
+                try:
+                    packet = self.receive.get(block=True, timeout=0.1)
+                    # We're only interested in responses to the request in question.
+                    if packet.packet_type == PACKET.RESPONSE and packet.response == RETURN_CODE.OK and len(packet.response_data) == 4:  # noqa: E501
+                        # Base ID is set in the response data.
+                        self._base_id = packet.response_data
+                        # Put packet back to the Queue, so the user can also react to it if required...
+                        self.receive.put(packet)
+                        break
+                    # Put other packets back to the Queue.
                     self.receive.put(packet)
-                    break
-                # Put other packets back to the Queue.
-                self.receive.put(packet)
-            except queue.Empty:
-                continue
-        # Return the current Base ID (might be None).
-        return self._base_id
+                except queue.Empty:
+                    continue
+            # Return the current Base ID (might be None).
+            return self._base_id
+        finally:
+            self._outside_callback = callback
     
 if __name__ == '__main__':
 
