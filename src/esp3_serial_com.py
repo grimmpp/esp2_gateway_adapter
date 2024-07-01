@@ -26,7 +26,7 @@ class ESP3SerialCommunicator(Communicator):
                  log=None, 
                  callback=None, 
                  baud_rate=57600, 
-                 reconnection_timeout:float=10, 
+                 reconnection_timeout:float=10,     # actually this is the time to wait until next reconnection will be tried out
                  esp2_translation_enabled:bool=False, 
                  auto_reconnect:bool=True):
         
@@ -39,7 +39,7 @@ class ESP3SerialCommunicator(Communicator):
         self.log = log or logging.getLogger('enocean.communicators.SerialCommunicator')
 
         self._baud_rate = baud_rate
-        self.__recon_time = reconnection_timeout
+        self.__recon_time = reconnection_timeout 
         self.is_serial_connected = threading.Event()
         self.status_changed_handler = None
         self.__ser = None

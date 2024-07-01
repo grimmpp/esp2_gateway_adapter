@@ -6,7 +6,11 @@ import os
 
 from zeroconf import ServiceBrowser, Zeroconf, ServiceStateChange
 
-from .esp3_serial_com import ESP3SerialCommunicator
+## only for debug
+if __name__ == '__main__':
+    from esp3_serial_com import ESP3SerialCommunicator
+else:
+    from .esp3_serial_com import ESP3SerialCommunicator
 
 
 def detect_lan_gateways() -> list[str]:
@@ -48,10 +52,13 @@ class TCP2SerialCommunicator(ESP3SerialCommunicator):
                  port,
                  log=None, 
                  callback=None, 
-                 reconnection_timeout:float=10,
+                 reconnection_timeout:float=10,     # actually this is the time to wait until next reconnection will be tried out
                  esp2_translation_enabled:bool=False,  
-                 auto_reconnect=True):
+                 auto_reconnect=True,
+                 tcp_connection_timeout:float = 1):
         
+        self._RECONNECTION_TIMEOUT = 10
+        self._tcp_connection_timeout = tcp_connection_timeout
         self.__recon_time = reconnection_timeout
         self.esp2_translation_enabled = esp2_translation_enabled
         self._outside_callback = callback
@@ -61,7 +68,7 @@ class TCP2SerialCommunicator(ESP3SerialCommunicator):
 
         self._host = host
         self._port = port
-        
+
         self.log = log or logging.getLogger('eltakobus.tcp2serial')
 
         self.__ser = None
@@ -88,9 +95,12 @@ class TCP2SerialCommunicator(ESP3SerialCommunicator):
                     
                     self.__ser = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     self.__ser.connect((self._host, self._port))
-                    self.__ser.settimeout(1)
+                    if self._auto_reconnect:
+                        self.__ser.settimeout(self._tcp_connection_timeout)
+                    else:
+                        self.__ser.settimeout(None)
 
-                    self.log.info("Established TCP connection to %s:%s", self._host, self._port)
+                    self.log.info(f"Established TCP connection to {self._host}:{self._port} (blocking: {not self._auto_reconnect}, tcp timeout: {self._tcp_connection_timeout} sec, serial timeout: {self._RECONNECTION_TIMEOUT} sec)")
                     
                     self.is_serial_connected.set()
                     self._fire_status_change_handler(connected=True)
@@ -114,10 +124,14 @@ class TCP2SerialCommunicator(ESP3SerialCommunicator):
                     timeout_count = 0
 
                 except socket.timeout as e:
-                    timeout_count += 1
-                    if timeout_count > 10:  # after 10s without receiving something disconnect
-                        timeout_count = 0
-                        self.__ser.close()
+                    if self._auto_reconnect:
+                        timeout_count += 1
+                        if timeout_count > self._RECONNECTION_TIMEOUT:  # after 10s without receiving something disconnect
+                            timeout_count = 0
+                            self.__ser.close()
+                    else:
+                        self.log.debug(f"auto-reconnect is disabled ({self._auto_reconnect})")
+                        raise e
                         
                 time.sleep(0)
 
