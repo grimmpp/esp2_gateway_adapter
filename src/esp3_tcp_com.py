@@ -47,6 +47,10 @@ def detect_lan_gateways() -> list[str]:
 
 class TCP2SerialCommunicator(ESP3SerialCommunicator):
 
+    KEEP_ALIVE_MESSAGES = [
+        b'IM2M'     # keep-alive-message for PioTek LAN Gateway
+        ]
+
     def __init__(self, 
                  host, 
                  port,
@@ -118,7 +122,7 @@ class TCP2SerialCommunicator(ESP3SerialCommunicator):
                 try:
                     data = self.__ser.recv(1024)
                     # print(hex(int.from_bytes(data, "big")))
-                    if data != b'IM2M':
+                    if data not in self.KEEP_ALIVE_MESSAGES:
                         self._buffer = data
                         self.parse()
                     timeout_count = 0
