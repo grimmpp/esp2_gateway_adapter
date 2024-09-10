@@ -142,7 +142,9 @@ class TCP2SerialCommunicator(ESP3SerialCommunicator):
             except Exception as e:
                 self._fire_status_change_handler(connected=False)
                 self.is_serial_connected.clear()
-                self.log.error(e)
+                self.log.exception(e)
+                if self.__ser is not None:
+                    self.__ser.close()
                 self.__ser = None
                 if self._auto_reconnect:
                     self.log.info("TCP2Serial communication crashed. Wait %s seconds for reconnection.", self.__recon_time)
