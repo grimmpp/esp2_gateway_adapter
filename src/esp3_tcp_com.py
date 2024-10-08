@@ -165,7 +165,7 @@ if __name__ == '__main__':
     def callback_fuct(data):
         print( data)
 
-    t = TCP2SerialCommunicator('192.168.178.85', 5100, callback=callback_fuct, esp2_translation_enabled=True, auto_reconnect=True)
+    t = TCP2SerialCommunicator('homeassistant.local', 12345, callback=callback_fuct, esp2_translation_enabled=True, auto_reconnect=True)
     t.start()
 
     time.sleep(4)
