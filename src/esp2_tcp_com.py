@@ -139,7 +139,7 @@ class ESP2TCP2SerialCommunicator(RS485SerialInterfaceV2):
             self.__ser = None
         self.is_serial_connected.clear()
         self._fire_status_change_handler(connected=False)
-        self.logger.info('TCP2SerialCommunicator stopped')
+        self.log.info('TCP2SerialCommunicator stopped')
 
 
 
