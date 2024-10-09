@@ -63,6 +63,8 @@ class ESP2TCP2SerialCommunicator(RS485SerialInterfaceV2):
             pass
         return None
 
+    def is_active(self) -> bool:
+        return not self._stop_flag.is_set()
 
     def run(self):
         timeout_count = 0
