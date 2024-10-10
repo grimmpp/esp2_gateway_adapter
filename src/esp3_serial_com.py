@@ -106,6 +106,12 @@ class ESP3SerialCommunicator(Communicator):
             org = 0x06
         elif packet.rorg == RORG.BS4:
             org = 0x07
+        ## base id
+        elif packet.response == RETURN_CODE.OK and len(packet.response_data) == 4:
+            org = 0x98
+        ## versions
+        elif packet.response == RETURN_CODE.OK and len(packet.response_data) == 32:
+            org = 0x8c
         else:
             return None
 
@@ -113,8 +119,11 @@ class ESP3SerialCommunicator(Communicator):
         in_or_out = 0x6b if sub_tel == PACKET.RADIO_SUB_TEL else 0x0b
 
         if org == 0x07:
-            
             body:bytes = bytes([in_or_out, org] + packet.data[1:])
+        elif org == 0x98:
+            body:bytes = bytes([0x8b, org] + packet.response_data + [0x00, 0x00, 0x00, 0x00] + [0x00])
+        elif org == 0x8c:
+            body:bytes = bytes([0x8b, org] + packet.response_data[4:8] + packet.response_data[12:16] + [0x00])
         else:
             # data = ['0xf6', '0x50', '0xff', '0xa2', '0x24', '0x1', '0x30']
             body:bytes = bytes([in_or_out, org] + packet.data[1:2] + [0,0,0] + packet.data[2:])
@@ -130,7 +139,7 @@ class ESP3SerialCommunicator(Communicator):
         if self._outside_callback:
             if self.esp2_translation_enabled:
                 # only when message is radio telegram
-                if msg.packet_type == PACKET.RADIO:
+                if msg.packet_type == PACKET.RADIO or msg.packet_type == PACKET.RESPONSE:
                     esp2_msg = ESP3SerialCommunicator.convert_esp3_to_esp2_message(msg)
                     
                     if esp2_msg is None:
@@ -232,6 +241,13 @@ class ESP3SerialCommunicator(Communicator):
                     self.__callback_wrapper(packet)
                 self.logger.debug(packet)
 
+
+    async def send_base_id_request(self):
+        super().send(Packet(PACKET.COMMON_COMMAND, data=[0x08]))
+
+    async def send_version_request(self):
+        super().send(Packet(PACKET.COMMON_COMMAND, data=[0x03]))
+
     @property
     def base_id(self):
         ''' Fetches Base ID from the transmitter, if required. Otherwise returns the currently set Base ID. '''
@@ -244,7 +260,7 @@ class ESP3SerialCommunicator(Communicator):
                 return self._base_id
 
             # Send COMMON_COMMAND 0x08, CO_RD_IDBASE request to the module
-            super().send(Packet(PACKET.COMMON_COMMAND, data=[0x08]))
+            self.send_base_id_request()
             # Loop over 10 times, to make sure we catch the response.
             # Thanks to timeout, shouldn't take more than a second.
             # Unfortunately, all other messages received during this time are ignored.
