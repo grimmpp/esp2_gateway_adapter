@@ -260,7 +260,7 @@ class ESP3SerialCommunicator(Communicator):
                 return self._base_id
 
             # Send COMMON_COMMAND 0x08, CO_RD_IDBASE request to the module
-            self.send_base_id_request()
+            asyncio.run( self.send_base_id_request() )
             # Loop over 10 times, to make sure we catch the response.
             # Thanks to timeout, shouldn't take more than a second.
             # Unfortunately, all other messages received during this time are ignored.
