@@ -37,6 +37,14 @@ class ESP2TCP2SerialCommunicator(RS485SerialInterfaceV2):
 
         self.__ser = None
 
+    @property
+    def host(self):
+        return self._host
+
+    @property
+    def port(self):
+        return self._port
+
     def set_auto_reconnect(self, enabled:bool):
         self._auto_reconnect = enabled
 

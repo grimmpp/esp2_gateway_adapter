@@ -1,8 +1,6 @@
 import socket
 import time
 import logging
-import sys
-import os
 
 from zeroconf import ServiceBrowser, Zeroconf, ServiceStateChange
 
@@ -76,6 +74,14 @@ class TCP2SerialCommunicator(ESP3SerialCommunicator):
         self.log = log or logging.getLogger('eltakobus.tcp2serial')
 
         self.__ser = None
+
+    @property
+    def host(self):
+        return self._host
+
+    @property
+    def port(self):
+        return self._port
 
     def set_auto_reconnect(self, enabled:bool):
         self._auto_reconnect = enabled
