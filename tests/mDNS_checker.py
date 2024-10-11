@@ -22,7 +22,7 @@ class MyListener:
 
 zeroconf = Zeroconf()
 listener = MyListener()
-# browser = ServiceBrowser(zeroconf, "_services._dns-sd._udp.local.", listener)
+browser = ServiceBrowser(zeroconf, "_services._dns-sd._udp.local.", listener)
 
 
 # browser = ServiceBrowser(zeroconf, "_tcp.local.", listener)

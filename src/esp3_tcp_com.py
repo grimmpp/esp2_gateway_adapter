@@ -1,6 +1,7 @@
 import socket
 import time
 import logging
+import select
 
 from zeroconf import ServiceBrowser, Zeroconf, ServiceStateChange
 
@@ -126,12 +127,16 @@ class TCP2SerialCommunicator(ESP3SerialCommunicator):
 
                 # Read chars from serial port as hex numbers
                 try:
-                    data = self.__ser.recv(1024)
-                    # print(hex(int.from_bytes(data, "big")))
-                    if data not in self.KEEP_ALIVE_MESSAGES:
-                        self._buffer = data
-                        self.parse()
-                    timeout_count = 0
+                    # prevent to block recv operation
+                    ready_to_read, _, _ = select.select([self.__ser], [], [], 1) # timeout 1sec
+
+                    if ready_to_read:
+                        data = self.__ser.recv(1024)
+                        # print(hex(int.from_bytes(data, "big")))
+                        if data not in self.KEEP_ALIVE_MESSAGES:
+                            self._buffer = data
+                            self.parse()
+                        timeout_count = 0
 
                 except socket.timeout as e:
                     if self._auto_reconnect:
@@ -171,7 +176,7 @@ if __name__ == '__main__':
     def callback_fuct(data):
         print( data)
 
-    t = TCP2SerialCommunicator('homeassistant.local', 12345, callback=callback_fuct, esp2_translation_enabled=True, auto_reconnect=True)
+    t = TCP2SerialCommunicator('192.168.178.93', 2325, callback=callback_fuct, esp2_translation_enabled=True, auto_reconnect=True)
     t.start()
 
     time.sleep(4)
