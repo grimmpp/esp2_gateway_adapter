@@ -7,6 +7,7 @@ import serial
 import time
 import threading
 
+from typing import Callable, Union
 import queue
 
 from enocean.communicators.communicator import Communicator
@@ -22,13 +23,25 @@ class ESP3SerialCommunicator(Communicator):
     ''' Serial port communicator class for EnOcean radio '''
 
     def __init__(self, 
-                 filename, 
-                 log=None, 
-                 callback=None, 
-                 baud_rate=57600, 
-                 reconnection_timeout:float=10,     # actually this is the time to wait until next reconnection will be tried out
+                 filename:str, 
+                 logger:logging.Logger=logging.getLogger('enocean.communicators.SerialCommunicator'), 
+                 callback:Callable[Union[ESP2Message, Packet], None]=None, 
+                 baud_rate:int=57600, 
+                 auto_reconnect:bool=True,
+                 reconnection_timeout:float=10,
                  esp2_translation_enabled:bool=False, 
-                 auto_reconnect:bool=True):
+                 ):
+        """_summary_
+
+        Args:
+            filename (str): serial path / com port
+            loggr (logging.Logger, optional): Logger. Defaults to logging.getLogger('enocean.communicators.SerialCommunicator').
+            callback (Callable[Union[ESP2Message, Packet], None], optional): Callback function which takes received message for data processing. Defaults to None.
+            baud_rate (int, optional): For connecting to serial port. Defaults to 57600.
+            auto_reconnect (bool, optional): When enabled tries to restart the connection after unwanted disconnect. Defaults to True.
+            reconnection_timeout (float, optional): When there is a disconnect this adapter will wait for X seconds before trying to restart. Defaults to 10.
+            esp2_translation_enabled (bool, optional): Converts ESP3 messages into ESP2 and passes it to the callback function otherwise ESP3 message will be passed. Defaults to False.
+        """
         
         self.esp2_translation_enabled = esp2_translation_enabled
         self._outside_callback = callback
@@ -36,7 +49,7 @@ class ESP3SerialCommunicator(Communicator):
         super(ESP3SerialCommunicator, self).__init__(self.__callback_wrapper)
         
         self._filename = filename
-        self.log = log or logging.getLogger('enocean.communicators.SerialCommunicator')
+        self.logger = logger
 
         self._baud_rate = baud_rate
         self.__recon_time = reconnection_timeout 
@@ -133,7 +146,7 @@ class ESP3SerialCommunicator(Communicator):
 
     def __callback_wrapper(self, msg: Packet):
         if msg.packet_type == PACKET.RESPONSE and msg.data[0] != RETURN_CODE.OK:
-            self.log.error(f"Received ESP3 response with return code {RETURN_CODE(msg.data[0]).name} ({msg.data[0]}) - {str(msg)} ")
+            self.logger.error(f"Received ESP3 response with return code {RETURN_CODE(msg.data[0]).name} ({msg.data[0]}) - {str(msg)} ")
             return
 
         if self._outside_callback:
@@ -143,7 +156,7 @@ class ESP3SerialCommunicator(Communicator):
                     esp2_msg = ESP3SerialCommunicator.convert_esp3_to_esp2_message(msg)
                     
                     if esp2_msg is None:
-                        self.log.warn("[ESP3SerialCommunicator] Cannot convert to esp2 message (%s).", msg)
+                        self.logger.warn("[ESP3SerialCommunicator] Cannot convert to esp2 message (%s).", msg)
                     else:
                         self._outside_callback(esp2_msg)
 
@@ -159,17 +172,17 @@ class ESP3SerialCommunicator(Communicator):
         if self.esp2_translation_enabled:
             if not isinstance(packet, Packet):
                 esp3_msg = ESP3SerialCommunicator.convert_esp2_to_esp3_message(packet)
-                self.log.info(f"Converted esp2 ({str(packet)} - {b2s(packet.serialize())}) message to esp3 ({str(esp3_msg)} - {b2s(esp3_msg.build())})")
+                self.logger.info(f"Converted esp2 ({str(packet)} - {b2s(packet.serialize())}) message to esp3 ({str(esp3_msg)} - {b2s(esp3_msg.build())})")
             else:
                 esp3_msg = packet
             
             if esp3_msg is None:
-                self.log.warn(f"[ESP3SerialCommunicator] Cannot convert to esp3 message ({str(packet)}).")
+                self.logger.warn(f"[ESP3SerialCommunicator] Cannot convert to esp3 message ({str(packet)}).")
             else:
-                self.log.info(f"Send ESP3 message {str(esp3_msg)}")
+                self.logger.info(f"Send ESP3 message {str(esp3_msg)}")
                 return super().send(esp3_msg)
         else:
-            self.log.info(f"Send ESP3 message {str(packet)}")
+            self.logger.info(f"Send ESP3 message {str(packet)}")
             return super().send(packet)
 
     def run(self):
@@ -180,7 +193,7 @@ class ESP3SerialCommunicator(Communicator):
                 # Initialize serial port
                 if self.__ser is None:
                     self.__ser = serial.Serial(self._filename, self._baud_rate, timeout=0.1)
-                    self.log.info("Established serial connection to %s - baudrate: %d", self._filename, self._baud_rate)
+                    self.logger.info("Established serial connection to %s - baudrate: %d", self._filename, self._baud_rate)
                     self.is_serial_connected.set()
                     self._fire_status_change_handler(connected=True)
 
@@ -190,7 +203,7 @@ class ESP3SerialCommunicator(Communicator):
                     packet = self._get_from_send_queue()
                     if not packet:
                         break
-                    self.log.debug("send msg: %s", packet)
+                    self.logger.debug("send msg: %s", packet)
                     self.__ser.write(bytearray(packet.build()))
 
                 # Read chars from serial port as hex numbers
@@ -201,10 +214,10 @@ class ESP3SerialCommunicator(Communicator):
             except (serial.SerialException, IOError) as e:
                 self._fire_status_change_handler(connected=False)
                 self.is_serial_connected.clear()
-                self.log.error(e)
+                self.logger.error(e)
                 self.__ser = None
                 if self._auto_reconnect:
-                    self.log.info("Serial communication crashed. Wait %s seconds for reconnection.", self.__recon_time)
+                    self.logger.info("Serial communication crashed. Wait %s seconds for reconnection.", self.__recon_time)
                     time.sleep(self.__recon_time)
                 else:
                     self._stop_flag.set()
