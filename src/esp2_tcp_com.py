@@ -35,6 +35,7 @@ class ESP2TCP2SerialCommunicator(RS485SerialInterfaceV2):
 
         self.log = log or logging.getLogger('eltakobus.tcp2serial')
 
+        self.daemon = True
         self.__ser = None
 
     @property

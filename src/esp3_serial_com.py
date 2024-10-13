@@ -55,6 +55,7 @@ class ESP3SerialCommunicator(Communicator):
         self.__recon_time = reconnection_timeout 
         self.is_serial_connected = threading.Event()
         self.status_changed_handler = None
+        self.daemon = True
         self.__ser = None
 
     def set_callback(self, callback):

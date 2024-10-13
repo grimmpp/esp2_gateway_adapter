@@ -89,6 +89,7 @@ class TCP2SerialCommunicator(ESP3SerialCommunicator):
         self._port = port
         self.log = logger
 
+        self.daemon = True
         self.__ser = None
 
 
