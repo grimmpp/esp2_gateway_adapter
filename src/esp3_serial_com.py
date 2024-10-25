@@ -264,6 +264,10 @@ class ESP3SerialCommunicator(Communicator):
 
     @property
     def base_id(self):
+        asyncio.run(self.async_base_id)
+
+    @property
+    async def async_base_id(self):
         ''' Fetches Base ID from the transmitter, if required. Otherwise returns the currently set Base ID. '''
         try:
             callback = self._outside_callback
@@ -338,6 +342,7 @@ if __name__ == '__main__':
 
     # exit(0)
 
+    ## Connects to serial port
     com = ESP3SerialCommunicator("COM12", callback=cb, esp2_translation_enabled=False)
     com.start()
     com.is_serial_connected.wait(timeout=10)
