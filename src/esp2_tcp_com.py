@@ -31,7 +31,14 @@ class ESP2TCP2SerialCommunicator(RS485SerialInterfaceV2):
         self._host = host
         self._port = port
 
-        super(ESP2TCP2SerialCommunicator, self).__init__(None, log, callback, None, reconnection_timeout, 0.01, auto_reconnect)
+        super(ESP2TCP2SerialCommunicator, self).__init__(
+            filename = None, 
+            log = log, 
+            callback = callback, 
+            baud_rate = None, 
+            reconnection_timeout = reconnection_timeout, 
+            delay_message = 0.01, 
+            auto_reconnect = auto_reconnect)
 
         self.log = log or logging.getLogger('eltakobus.tcp2serial')
 

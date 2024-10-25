@@ -83,7 +83,14 @@ class TCP2SerialCommunicator(ESP3SerialCommunicator):
         self._outside_callback = callback
         self._auto_reconnect = auto_reconnect
 
-        super(TCP2SerialCommunicator, self).__init__(None, logger, callback, None, reconnection_timeout, esp2_translation_enabled, auto_reconnect)
+        super(TCP2SerialCommunicator, self).__init__(
+            filename = None, 
+            logger = logger, 
+            callback = callback, 
+            baud_rate = None, 
+            reconnection_timeout = reconnection_timeout, 
+            esp2_translation_enabled = esp2_translation_enabled, 
+            auto_reconnect = auto_reconnect)
 
         self._host = host
         self._port = port

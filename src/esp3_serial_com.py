@@ -46,7 +46,7 @@ class ESP3SerialCommunicator(Communicator):
         self.esp2_translation_enabled = esp2_translation_enabled
         self._outside_callback = callback
         self._auto_reconnect = auto_reconnect
-        super(ESP3SerialCommunicator, self).__init__(self.__callback_wrapper)
+        super(ESP3SerialCommunicator, self).__init__(callback= self.__callback_wrapper)
         
         self._filename = filename
         self.logger = logger
@@ -278,7 +278,7 @@ class ESP3SerialCommunicator(Communicator):
                 return self._base_id
 
             # Send COMMON_COMMAND 0x08, CO_RD_IDBASE request to the module
-            asyncio.run( self.send_base_id_request() )
+            await self.send_base_id_request()
             # Loop over 10 times, to make sure we catch the response.
             # Thanks to timeout, shouldn't take more than a second.
             # Unfortunately, all other messages received during this time are ignored.
