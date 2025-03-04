@@ -1,3 +1,4 @@
+import asyncio
 import socket
 import time
 import logging
@@ -216,6 +217,7 @@ if __name__ == '__main__':
     t = TCP2SerialCommunicator('192.168.178.93', 2325, 
                                callback=callback_fuct, 
                                esp2_translation_enabled=True, 
+                            #    esp2_translation_enabled=False,
                                auto_reconnect=True, 
                                reconnection_timeout=10, 
                                tcp_keep_alive_timeout=10,
@@ -223,8 +225,30 @@ if __name__ == '__main__':
                                logger=logging.getLogger())
     t.start()
 
-    time.sleep(4)
+    # time.sleep(1)
+    # base_id = t.base_id
 
-    base_id = t.base_id
+    time.sleep(1)
+
+    logger=logging.getLogger()
+
+    logger.info("Get base id:")
+    asyncio.run( t.send( Packet(PACKET.COMMON_COMMAND, data=[0x08]) ))
+
+
+    # logger.info("Repeating activated level 0")
+    # asyncio.run( t.send_repeater_mode(0x00) )
+    # time.sleep(1)
+    # logger.info("Result: ")
+    # asyncio.run( t.send_repeater_mode_request() )
+    # time.sleep(1)
+
+    logger.info("Repeating activated level 1")
+    asyncio.run( t.send_repeater_mode(0x01) )
+    time.sleep(1)
+    logger.info("Result: ")
+    asyncio.run( t.send_repeater_mode_request() )
+    time.sleep(1)
     
+
     t.join()

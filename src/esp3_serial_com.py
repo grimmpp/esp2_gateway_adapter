@@ -120,6 +120,9 @@ class ESP3SerialCommunicator(Communicator):
             org = 0x06
         elif packet.rorg == RORG.BS4:
             org = 0x07
+        ## repeater mode
+        elif packet.response == RETURN_CODE.OK and len(packet.response_data) == 2:
+            org = 0x99
         ## base id
         elif packet.response == RETURN_CODE.OK and len(packet.response_data) == 4:
             org = 0x98
@@ -138,6 +141,8 @@ class ESP3SerialCommunicator(Communicator):
             body:bytes = bytes([0x8b, org] + packet.response_data + [0x00, 0x00, 0x00, 0x00] + [0x00])
         elif org == 0x8c:
             body:bytes = bytes([0x8b, org] + packet.response_data[4:8] + packet.response_data[12:16] + [0x00])
+        elif org == 0x99:
+            body:bytes = bytes([0x8b, org] + packet.response_data + [0,0] + [0x00, 0x00, 0x00, 0x00] + [0x00])
         else:
             # data = ['0xf6', '0x50', '0xff', '0xa2', '0x24', '0x1', '0x30']
             body:bytes = bytes([in_or_out, org] + packet.data[1:2] + [0,0,0] + packet.data[2:])
@@ -157,7 +162,10 @@ class ESP3SerialCommunicator(Communicator):
                     esp2_msg = ESP3SerialCommunicator.convert_esp3_to_esp2_message(msg)
                     
                     if esp2_msg is None:
-                        self.logger.warn("[ESP3SerialCommunicator] Cannot convert to esp2 message (%s).", msg)
+                        if msg.packet_type == PACKET.RESPONSE and len(msg.response_data) == 0:
+                            self.logger.debug("[ESP3SerialCommunicator] Received acknowledgement!")
+                        else:
+                            self.logger.warn("[ESP3SerialCommunicator] Cannot convert to esp2 message (%s).", msg)
                     else:
                         self._outside_callback(esp2_msg)
 
@@ -262,6 +270,14 @@ class ESP3SerialCommunicator(Communicator):
     async def send_version_request(self):
         super().send(Packet(PACKET.COMMON_COMMAND, data=[0x03]))
 
+    async def send_repeater_mode_request(self):
+        super().send(Packet(PACKET.COMMON_COMMAND, data=[10]))
+
+    # mode: 0 = disabled, 1 = repeater level 1, 2 = repeater level 2
+    async def send_repeater_mode(self, mode:int):
+        filter = 0 if mode == 0 else 1
+        super().send(Packet(PACKET.COMMON_COMMAND, data=[0x09,filter,mode]))
+
     @property
     def base_id(self):
         asyncio.run(self.async_base_id)
@@ -300,6 +316,36 @@ class ESP3SerialCommunicator(Communicator):
             return self._base_id
         finally:
             self._outside_callback = callback
+
+    async def get_repeater_mode(self) -> int | None:
+        try:
+            callback = self._outside_callback
+            self._outside_callback = None
+
+            # Send COMMON_COMMAND 0x0a, CO_RD_IDBASE request to the module
+            super().send(Packet(PACKET.COMMON_COMMAND, data=[0x08]))
+            # Loop over 10 times, to make sure we catch the response.
+            # Thanks to timeout, shouldn't take more than a second.
+            # Unfortunately, all other messages received during this time are ignored.
+            for i in range(0, 10):
+                try:
+                    packet = self.receive.get(block=True, timeout=0.1)
+                    # We're only interested in responses to the request in question.
+                    if packet.packet_type == PACKET.RESPONSE and packet.response == RETURN_CODE.OK and len(packet.response_data) == 4:  # noqa: E501
+                        # Base ID is set in the response data.
+                        self._base_id = packet.response_data
+                        # Put packet back to the Queue, so the user can also react to it if required...
+                        self.receive.put(packet)
+                        break
+                    # Put other packets back to the Queue.
+                    self.receive.put(packet)
+                except queue.Empty:
+                    continue
+            # Return the current Base ID (might be None).
+            return self._base_id
+        finally:
+            self._outside_callback = callback
+
     
 if __name__ == '__main__':
 
@@ -343,7 +389,7 @@ if __name__ == '__main__':
     # exit(0)
 
     ## Connects to serial port
-    com = ESP3SerialCommunicator("COM12", callback=cb, esp2_translation_enabled=False)
+    com = ESP3SerialCommunicator("COM3", callback=cb, esp2_translation_enabled=False)
     com.start()
     com.is_serial_connected.wait(timeout=10)
     com.set_callback(None)
@@ -377,7 +423,11 @@ if __name__ == '__main__':
 
     destination = [0xFF,0xFF,0xFF,0xFF]# [0xFF,0xA2,0x24,0x01]
     
-    
+
+    # # activate repeater level 2
+    # asyncio.run(com.send(Packet(PACKET.COMMON_COMMAND, data=[0x09,0x01,0x02])))
+
+
     # command.extend([0xFF,0xD6,0x30,0x01])
     # command.extend([0x00])
 
