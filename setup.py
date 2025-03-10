@@ -14,7 +14,7 @@ with open('README.md', encoding="utf-8") as f:
 with open('LICENSE', encoding="utf-8") as f:
     license = f.read()
 
-required = ['eltako14bus>=0.0.46', 'enocean>=0.60.1', 'pyserial', 'pyserial-asyncio', 'aiocoap', 'zeroconf>=0.132.2']
+required = ['eltako14bus>=0.0.46', 'enocean>=0.60.1', 'pyserial', 'pyserial-asyncio', 'aiocoap', 'zeroconf']
 
 
 
