@@ -3,6 +3,6 @@ eltako14bus>=0.0.53
 pyserial>=3.5
 pyserial-asyncio>=0.6
 enocean>=0.60.1
-zeroconf>=0.132.2
+zeroconf
 PyYAML>=6.0.1
 pytest

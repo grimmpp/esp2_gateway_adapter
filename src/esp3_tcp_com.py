@@ -243,12 +243,19 @@ if __name__ == '__main__':
     # asyncio.run( t.send_repeater_mode_request() )
     # time.sleep(1)
 
-    logger.info("Repeating activated level 1")
-    asyncio.run( t.send_repeater_mode(0x01) )
-    time.sleep(1)
-    logger.info("Result: ")
-    asyncio.run( t.send_repeater_mode_request() )
-    time.sleep(1)
+    # logger.info("Repeating activated level 1")
+    # asyncio.run( t.send_repeater_mode(0x01) )
+    # time.sleep(1)
+    # logger.info("Result: ")
+    # asyncio.run( t.send_repeater_mode_request() )
+    # time.sleep(1)
+
+    # logger.info("Repeating activated level 2")
+    # asyncio.run( t.send_repeater_mode(0x02) )
+    # time.sleep(1)
+    # logger.info("Result: ")
+    # asyncio.run( t.send_repeater_mode_request() )
+    # time.sleep(1)
     
 
     t.join()
