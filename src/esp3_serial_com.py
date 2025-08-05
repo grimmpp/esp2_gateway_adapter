@@ -120,6 +120,8 @@ class ESP3SerialCommunicator(Communicator):
             org = 0x06
         elif packet.rorg == RORG.BS4:
             org = 0x07
+        elif not hasattr(packet, 'response'):
+            return None
         ## repeater mode
         elif packet.response == RETURN_CODE.OK and len(packet.response_data) == 2:
             org = 0x99
