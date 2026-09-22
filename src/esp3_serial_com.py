@@ -3,6 +3,7 @@ from __future__ import print_function, unicode_literals, division, absolute_impo
 import asyncio
 import datetime
 import logging
+import os
 import serial
 import time
 import threading
@@ -153,6 +154,12 @@ class ESP3SerialCommunicator(Communicator):
     
 
     def __callback_wrapper(self, msg: Packet):
+        try:
+            self.__dispatch(msg)
+        except Exception:
+            self.logger.exception("Error while handling received packet %s", msg)
+
+    def __dispatch(self, msg: Packet):
         if msg.packet_type == PACKET.RESPONSE and msg.data[0] != RETURN_CODE.OK:
             self.logger.error(f"Received ESP3 response with return code {RETURN_CODE(msg.data[0]).name} ({msg.data[0]}) - {str(msg)} ")
             return
@@ -218,27 +225,51 @@ class ESP3SerialCommunicator(Communicator):
                     self.__ser.write(bytearray(packet.build()))
 
                 # Read chars from serial port as hex numbers
-                self._buffer.extend(bytearray(self.__ser.read(16)))
-                self.parse()
+                try:
+                    data = self.__ser.read(16)
+                except serial.SerialException as e:
+                    # FT232R based sticks (e.g. USB300) occasionally report
+                    # readiness to read right after a write and then deliver
+                    # nothing; pyserial raises. Only treat it as a disconnect
+                    # when the device node is actually gone.
+                    if not os.path.exists(self._filename):
+                        raise
+                    self.logger.warning("Transient serial read error, keeping connection: %s", e)
+                    data = b''
+                if data:
+                    self._buffer.extend(bytearray(data))
+                try:
+                    self.parse()
+                except Exception:
+                    # A malformed or unsupported packet must never kill the
+                    # reader thread; drop the buffer and carry on.
+                    self.logger.exception("Error while parsing received data, discarding buffer")
+                    self._buffer = bytearray()
                 time.sleep(0)
 
             except (serial.SerialException, IOError) as e:
                 self._fire_status_change_handler(connected=False)
                 self.is_serial_connected.clear()
                 self.logger.error(e)
-                self.__ser = None
+                self._close_serial()
                 if self._auto_reconnect:
                     self.logger.info("Serial communication crashed. Wait %s seconds for reconnection.", self.__recon_time)
                     time.sleep(self.__recon_time)
                 else:
                     self._stop_flag.set()
 
-        if self.__ser is not None:
-            self.__ser.close()
-            self.__ser = None
+        self._close_serial()
         self.is_serial_connected.clear()
         self._fire_status_change_handler(connected=False)
         self.logger.info('SerialCommunicator stopped')
+
+    def _close_serial(self):
+        if self.__ser is not None:
+            try:
+                self.__ser.close()
+            except Exception as e:
+                self.logger.debug("Closing serial port failed: %s", e)
+            self.__ser = None
 
 
     def parse(self):
