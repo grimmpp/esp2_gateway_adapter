@@ -14,7 +14,8 @@ with open('README.md', encoding="utf-8") as f:
 with open('LICENSE', encoding="utf-8") as f:
     license = f.read()
 
-required = ['eltako14bus>=0.0.46', 'enocean>=0.60.1', 'pyserial', 'pyserial-asyncio', 'aiocoap', 'zeroconf']
+# serialx replaces pyserial and pyserial-asyncio (rejected by Home Assistant from 2027.2).
+required = ['eltako14bus>=0.0.46', 'enocean>=0.60.1', 'serialx>=1.0', 'aiocoap', 'zeroconf']
 
 
 

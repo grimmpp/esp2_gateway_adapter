@@ -3,7 +3,7 @@ from __future__ import print_function, unicode_literals, division, absolute_impo
 import asyncio
 import datetime
 import logging
-import serial
+import serialx
 import time
 import threading
 
@@ -203,7 +203,10 @@ class ESP3SerialCommunicator(Communicator):
             try:
                 # Initialize serial port
                 if self.__ser is None:
-                    self.__ser = serial.Serial(self._filename, self._baud_rate, timeout=0.1)
+                    ser = serialx.Serial(self._filename, self._baud_rate, read_timeout=0.1)
+                    # Unlike pyserial, serialx does not open the port on creation.
+                    ser.open()
+                    self.__ser = ser
                     self.logger.info("Established serial connection to %s - baudrate: %d", self._filename, self._baud_rate)
                     self.is_serial_connected.set()
                     self._fire_status_change_handler(connected=True)
@@ -222,7 +225,7 @@ class ESP3SerialCommunicator(Communicator):
                 self.parse()
                 time.sleep(0)
 
-            except (serial.SerialException, IOError) as e:
+            except (serialx.SerialException, OSError) as e:
                 self._fire_status_change_handler(connected=False)
                 self.is_serial_connected.clear()
                 self.logger.error(e)
@@ -361,7 +364,7 @@ if __name__ == '__main__':
     # asyncio.run( com.send(Packet(PACKET.COMMON_COMMAND, data=[0x08])) )
     
 
-    # ser = serial.Serial("COM12", 57600, timeout=0.1)
+    # ser = serialx.Serial("COM12", 57600, read_timeout=0.1); ser.open()
 
     # # org = 0xF6  # org = 0x05, rorg = 0xF6
     # # package_type = 0x01  # Radio_ERP_1

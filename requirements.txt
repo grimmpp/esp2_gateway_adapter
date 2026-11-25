@@ -1,7 +1,6 @@
 ﻿aiocoap>=0.4.7
 eltako14bus>=0.0.53
-pyserial>=3.5
-pyserial-asyncio>=0.6
+serialx>=1.0
 enocean>=0.60.1
 zeroconf
 PyYAML>=6.0.1
